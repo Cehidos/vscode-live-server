@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Booster Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #1e1e2f;
+      color: #fff;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 30px;
+    }
+    h2 {
+      margin-top: 40px;
+      border-bottom: 2px solid #fff;
+      padding-bottom: 5px;
+    }
+    .table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 20px auto 20px auto; /* vertikaler Abstand, horizontal zentriert */
+  border: 1px solid #555;
+  border-radius: 5px;
+  width: 70%; /* wichtige Änderung: feste Breite */
+}
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      min-width: 600px;
+  margin: 0 auto;          /* NEU: Tabelle horizontal zentrieren */
+    }
+    th, td {
+      border: 1px solid #555;
+      padding: 10px;
+      text-align: center;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    th {
+      background-color: #2d2d44;
+    }
+    input, select {
+      width: 100%;
+      background-color: #333;
+      color: #fff;
+      border: none;
+      padding: 5px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 10px;
+      background-color: #444;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      cursor: pointer;
+      border-radius: 3px;
+      transition: background-color 0.2s ease;
+    }
+    button:hover {
+      background-color: #666;
+    }
+/* Abstand für den Twink-Button */
+    button.twink-button {
+      margin-left: 40px; /* 20px Abstand nach links (verschiebt nach rechts) */
+    }
+    .container {
+      margin-bottom: 40px;
+    }
+    #playerCountButtons {
+      margin-bottom: 30px;
+    }
+    #playerCountButtons button {
+      margin-right: 10px;
+    }
+    #playerCountButtons button.active {
+      background-color: #00aaff;
+      color: #fff;
+      font-weight: bold;
+    }
+    /* Gemeinsame Spaltenbreiten für main- und twinks-Tabellen */
+.main-table th:nth-child(1),
+.main-table td:nth-child(1),
+.twinks-table th:nth-child(1),
+.twinks-table td:nth-child(1) {
+  width: 150px; /* Spalte 1: Name */
+}
+
+.main-table th:nth-child(2),
+.main-table td:nth-child(2),
+.twinks-table th:nth-child(2),
+.twinks-table td:nth-child(2) {
+  width: 60px; /* Spalte 2: Raider.IO bzw. leer bei Twinks */
+}
+
+.main-table th:nth-child(3),
+.main-table td:nth-child(3),
+.twinks-table th:nth-child(3),
+.twinks-table td:nth-child(3) {
+  width: 50px; /* Spalte 3: Rolle */
+}
+
+.main-table th:nth-child(4),
+.main-table td:nth-child(4),
+.twinks-table th:nth-child(4),
+.twinks-table td:nth-child(4) {
+  width: 90px; /* Spalte 4: Klasse */
+}
+
+.main-table th:nth-child(5),
+.main-table td:nth-child(5),
+.twinks-table th:nth-child(5),
+.twinks-table td:nth-child(5) {
+  width: 50px; /* Spalte 5: Item lvl */
+}
+
+.main-table th:nth-child(6),
+.main-table td:nth-child(6),
+.twinks-table th:nth-child(6),
+.twinks-table td:nth-child(6) {
+  width: 110px; /* Spalte 6: Rüstung */
+}
+
+.main-table th:nth-child(7),
+.main-table td:nth-child(7),
+.twinks-table th:nth-child(7),
+.twinks-table td:nth-child(7) {
+  width: 180px; /* Spalte 7: Schlüsselstein */
+}
+
+.main-table th:nth-child(8),
+.main-table td:nth-child(8),
+.twinks-table th:nth-child(8),
+.twinks-table td:nth-child(8) {
+  width: 30px; /* Spalte 8: Stufe */
+}
+
+.main-table th:nth-child(9),
+.main-table td:nth-child(9),
+.twinks-table th:nth-child(9),
+.-table td:nth-child(9) {
+  width: 60px; /* Spalte 9: Fraktion */
+}
+
+.main-table th:nth-child(10),
+.main-table td:nth-child(10),
+.twinks-table th:nth-child(10),
+.twinks-table td:nth-child(10) {
+  width: 70px; /* Spalte 10: Aktionen */
+}
+
+  </style>
+</head>
+<body>
+  <h1>Booster Tool</h1>
+
+  <div id="playerCountButtons">
+    <button data-count="1" class="active">Solo</button>
+    <button data-count="2">Duo</button>
+    <button data-count="3">Trio</button>
+  <button class="twink-button">Twink hinzufügen</button>
+</div>
+  </div>
+
+  <div id="playersContainer"></div>
+
+  <!-- Output-Fenster und Copy-Button -->
+  <div style="margin-top: 30px;">
+    <h2>Output</h2>
+    <textarea id="outputText" rows="10" style="width: 100%; background-color: #333; color: #fff; border:none; padding:10px;" readonly></textarea>
+    <button onclick="copyOutput()">Copy Output</button>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'mythicplus_data_v2';
+
+    const playersContainer = document.getElementById('playersContainer');
+    const playerCountButtons = document.getElementById('playerCountButtons');
+    let currentPlayerCount = 1;
+
+    playerCountButtons.addEventListener('click', e => {
+      if (e.target.tagName !== 'BUTTON') return;
+      const count = parseInt(e.target.dataset.count);
+      if (!count || count === currentPlayerCount) return;
+      currentPlayerCount = count;
+      renderPlayers();
+
+      [...playerCountButtons.querySelectorAll('button')].forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.count) === currentPlayerCount);
+      });
+      generateOutput(); // Output nach Player Count Wechsel updaten
+    });
+
+    function createCell(value = '', isInput = true, type = 'input', options = []) {
+      const td = document.createElement('td');
+      if (isInput) {
+        if(type === 'input') {
+          const input = document.createElement('input');
+          input.value = value;
+          input.oninput = saveData;
+          td.appendChild(input);
+        } else if(type === 'select') {
+          const select = document.createElement('select');
+          if (value === undefined) value = '';
+          options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt;
+            if (opt === value) option.selected = true;
+            select.appendChild(option);
+          });
+          select.onchange = saveData;
+          td.appendChild(select);
+        }
+      } else {
+        td.textContent = value;
+      }
+      return td;
+    }
+
+    function createFraktionSelect(selectedValue) {
+      const td = document.createElement('td');
+      const select = document.createElement('select');
+      ['', 'Allianz', 'Horde'].forEach(opt => {
+        const option = document.createElement('option');
+        option.value = opt;
+        option.textContent = opt;
+        if (opt === selectedValue) option.selected = true;
+        select.appendChild(option);
+      });
+      select.onchange = saveData;
+      td.appendChild(select);
+      return td;
+    }
+
+    function createDeleteButton(row) {
+      const td = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.textContent = 'Löschen';
+      btn.onclick = () => {
+        row.remove();
+        saveData();
+      };
+      td.appendChild(btn);
+      return td;
+    }
+
+    function createDropdownCell(optionsArray, selectedValue = '') {
+      return createCell(selectedValue, true, 'select', optionsArray);
+    }
+
+    function createMainTable(playerIndex, data = {}) {
+      const container = document.createElement('div');
+      container.classList.add('container');
+
+      const title = document.createElement('h2');
+      title.textContent = `Spieler ${playerIndex + 1} - Mainchar`;
+      container.appendChild(title);
+
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('table-wrapper');
+
+      const table = document.createElement('table');
+      table.id = `mainTable_${playerIndex}`;
+      table.classList.add('main-table');
+
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      ['Name', 'Raider.IO', 'Rolle', 'Klasse', 'Item lvl', 'Rüstung', 'Schlüsselstein', 'Stufe', 'Fraktion', 'Aktionen'].forEach(head => {
+        const th = document.createElement('th');
+        th.textContent = head;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      table.appendChild(tbody);
+
+      wrapper.appendChild(table);
+      container.appendChild(wrapper);
+
+      addRow(table, 'main', data.main ? data.main[0] : {});
+
+      const twinkButton = document.createElement('button');
+      twinkButton.textContent = 'Twink hinzufügen';
+      container.appendChild(twinkButton);
+
+      const twinkWrapper = document.createElement('div');
+      twinkWrapper.classList.add('table-wrapper');
+
+      const twinkTable = document.createElement('table');
+      twinkTable.id = `twinkTable_${playerIndex}`;
+      twinkTable.classList.add('twinks-table');
+
+      const theadTwink = document.createElement('thead');
+      const headerRowTwink = document.createElement('tr');
+      ['Twinks', '', 'Rolle', 'Klasse', 'Item lvl', 'Rüstung', 'Schlüsselstein', 'Stufe', 'Fraktion', 'Aktionen'].forEach(head => {
+        const th = document.createElement('th');
+        th.textContent = head;
+        headerRowTwink.appendChild(th);
+      });
+      theadTwink.appendChild(headerRowTwink);
+      twinkTable.appendChild(theadTwink);
+
+      const tbodyTwink = document.createElement('tbody');
+      twinkTable.appendChild(tbodyTwink);
+
+      twinkWrapper.appendChild(twinkTable);
+      container.appendChild(twinkWrapper);
+
+      twinkButton.onclick = () => {
+        const twinkCount = tbodyTwink.rows.length;
+        addRow(twinkTable, 'twink', { name: `Twink ${twinkCount + 1}` });
+      };
+
+      if (data.twink) {
+        tbodyTwink.innerHTML = '';
+        data.twink.forEach(rowData => {
+          addRow(twinkTable, 'twink', rowData);
+        });
+      }
+
+      return container;
+    }
+
+    function addRow(table, type, rowData = {}) {
+      const tbody = table.querySelector('tbody');
+      const row = document.createElement('tr');
+
+      const classes = ['', 'Druide', 'Jäger', 'Magier', 'Mönch', 'Paladin', 'Priester', 'Schurke', 'Hexenmeister', 'Krieger', 'Todesritter', 'Dämonenjäger', 'Schamane', 'Evoker'];
+      const rollen = ['', 'Tank', 'Heiler', 'DD'];
+      const ruestungen = ['', 'Trade All'];
+      const dungeons = [
+        '',
+        'Operation Mechagon Werkstatt',
+        'Metbrauerei Glutbräu',
+        'Dunkelflammenspalt',
+        'Die Brutstätte',
+        'Priorat der Heiligen Flamme',
+        'Theater der Schmerzen',
+        'Das Riesenflöz',
+        'Operation Schleuse',
+
+      ];
+
+      row.appendChild(createCell(rowData.name || '', true));
+      row.appendChild(createCell(rowData.rio || '', true));
+      row.appendChild(createDropdownCell(rollen, rowData.rolle || ''));
+      row.appendChild(createDropdownCell(classes, rowData.klasse || ''));
+      row.appendChild(createCell(rowData.itemLvl || '', true));
+      row.appendChild(createDropdownCell(ruestungen, rowData.armour || ''));
+      row.appendChild(createDropdownCell(dungeons, rowData.key || ''));
+      row.appendChild(createDropdownCell(['', '+2', '+3', '+4', '+5', '+6', '+7', '+8', '+9', '+10', '+11', '+12', '+13', '+14', '+15', '+16', '+17', '+18', '+19', '+20'], rowData.level || ''));
+      row.appendChild(createFraktionSelect(rowData.fraktion || ''));
+      if (type === 'twink') {
+  row.appendChild(createDeleteButton(row));
+} else {
+  row.appendChild(document.createElement('td')); // Leere Zelle ohne Button
+}
+
+
+
+      tbody.appendChild(row);
+    }
+
+    function renderPlayers() {
+      playersContainer.innerHTML = '';
+      const savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
+      for (let i = 0; i < currentPlayerCount; i++) {
+        playersContainer.appendChild(createMainTable(i, savedData[i] || {}));
+      }
+    }
+
+    function saveData() {
+      const data = [];
+      for (let i = 0; i < currentPlayerCount; i++) {
+        const mainTable = document.getElementById(`mainTable_${i}`);
+        const twinkTable = document.getElementById(`twinkTable_${i}`);
+
+        const mainData = [];
+        const twinkData = [];
+
+        // Main row
+        const mainRow = mainTable.querySelector('tbody tr');
+        if (mainRow) {
+          mainData.push(getRowData(mainRow));
+        }
+
+        // Twinks rows
+        if (twinkTable) {
+          twinkTable.querySelectorAll('tbody tr').forEach(row => {
+            twinkData.push(getRowData(row));
+          });
+        }
+
+        data[i] = { main: mainData, twink: twinkData };
+      }
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      generateOutput();
+    }
+
+    function getRowData(row) {
+      const cells = row.querySelectorAll('td');
+
+      return {
+        name: cells[0].querySelector('input')?.value.trim() || '',
+        rio: cells[1].querySelector('input')?.value.trim() || '',
+        rolle: cells[2].querySelector('select')?.value || '',
+        klasse: cells[3].querySelector('select')?.value || '',
+        itemLvl: cells[4].querySelector('input')?.value.trim() || '',
+        armour: cells[5].querySelector('select')?.value || '',
+        key: cells[6].querySelector('select')?.value || '',
+        level: cells[7].querySelector('input')?.value.trim() || '',
+        fraktion: cells[8].querySelector('select')?.value || '',
+      };
+    }
+
+    // Hier die beiden geänderten Funktionen:
+
+    function generateOutput() {
+      const savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+      let output = '';
+
+      if (currentPlayerCount === 1) output += 'Solo\n\n';
+      else if (currentPlayerCount === 2) output += 'Duo\n\n';
+      else if (currentPlayerCount === 3) output += 'Trio\n\n';
+
+      savedData.forEach((player, i) => {
+        if(!player) return;
+        const main = player.main?.[0];
+        if(!main) return;
+
+        output += `Player ${i + 1} @${main.name} :Raiderio:${main.rio || ''} :Raiderio:\n`;
+
+        output += formatLine(main);
+        if(player.twink) {
+          player.twink.forEach(twink => {
+            output += formatLine(twink);
+          });
+        }
+        output += '\n';
+      });
+
+      document.getElementById('outputText').value = output.trim();
+    }
+
+    function formatLine(char) {
+      const roleMap = {
+        'Heiler': ':Heal:',
+        'Heal': ':Heal:',
+        'Heil': ':Heal:',
+        'Tank': ':Tank:',
+        'DD': ':damage:',
+        'DPS': ':damage:',
+      };
+
+      const classMap = {
+        'Druide': ':druid:',
+        'Jäger': ':hunter:',
+        'Magier': ':Mage:',
+        'Mönch': ':monk:',
+        'Paladin': ':paladin:',
+        'Priester': ':priest:',
+        'Schurke': ':rogue:',
+        'Hexenmeister': ':warlock:',
+        'Krieger': ':warrior:',
+        'Todesritter': ':deathknight:',
+        'Dämonenjäger': ':demonhunter~2:',
+        'Schamane': ':shaman:',
+        'Evoker': ':evoker:'
+      };
+
+      const rolle = roleMap[char.rolle] || `:${char.rolle}:`;
+      const klasse = classMap[char.klasse] || `:${char.klasse.toLowerCase()}:`;
+
+      const ilvl = char.itemLvl || '';
+
+      let armorStr = ':Armor:                   ';
+      if(char.armour === 'Trade All') armorStr = ':Armor: Trade All ';
+
+      let keyStr = ':keystone:No key ';
+      if(char.key && char.key.trim() !== '') {
+        keyStr = `:keystone:${char.key}`;
+        if(char.level && char.level.trim() !== '') {
+          keyStr += ` ${char.level}`;
+        }
+      }
+
+      return `${rolle} ${klasse}  ${ilvl} ${armorStr}${keyStr}\n`;
+    }
+
+    function copyOutput() {
+      const outputText = document.getElementById('outputText');
+      outputText.select();
+      outputText.setSelectionRange(0, 99999);
+      document.execCommand('copy');
+      alert('Output kopiert!');
+    }
+
+    // Init
+    renderPlayers();
+    saveData();
+
+  </script>
+</body>
+</html>
